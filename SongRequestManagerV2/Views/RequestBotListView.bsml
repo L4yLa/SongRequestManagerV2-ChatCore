@@ -1,0 +1,52 @@
+﻿<bg xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xsi:schemaLocation='https://monkeymanboy.github.io/BSML-Docs/ https://raw.githubusercontent.com/monkeymanboy/BSML-Docs/gh-pages/BSMLSchema.xsd'>
+  <horizontal horizontal-fit='MinSize' child-align='MiddleLeft'>
+    <vertical min-width='50' child-align='LowerLeft' horizontal-fit='PreferredSize'>
+      <text text='~version' />
+      <vertical active='~any-update' vertical-fit='PreferredSize'>
+        <text text='~new-version-text' color='lime'/>
+        <button text='~update-button-text' active='~update-button-active' on-click='update' />
+      </vertical>
+      <text text='~progress-text' align='BottomLeft' word-wrapping='false' overflow-mode='Overflow' anchor-max-x='0' anchor-min-x='0' anchor-max-y='1' anchor-min-y='0' size-delta-x='50'></text>
+    </vertical>
+    <vertical min-width='80'>
+      <page-button event-click="request-list#PageUp" direction='Up'></page-button>
+      <custom-list id='request-list' data='requests' clickable-cells='true' select-cell='selected-cell' min-width='80'>
+        <background tags='selected' background='panel-fade-gradient' background-color='fuchsia'></background>
+        <background tags='hovered' background='panel-top' hover-hint='~hover-hint'></background>
+        <stack>
+          <horizontal vertical-fit='Unconstrained' horizontal-fit='MinSize'>
+            <image id="coverImage" min-height="8" min-width="8" pref-width="10" pref-height="5" anchor-min-x="0" anchor-min-y="0" anchor-max-x="0" anchor-max-y="1" ></image>
+            <vertical horizontal-fit="Unconstrained" min-width="72" child-expand-width="true">
+              <text id="songNameText" word-wrapping="false" text="~song-name"></text>
+              <text id="authorNameText" word-wrapping="false" text="~author-name" color="grey" font-size="3" align="TopLeft"></text>
+            </vertical>
+          </horizontal>
+        </stack>
+      </custom-list>
+      <page-button event-click="request-list#PageDown" direction='Down'></page-button>
+    </vertical>
+    <vertical min-width='50' child-expand-width='true' pad='5'>
+      <button text='~history-button-text' interactable='~history-button-enable' on-click='history-click' hover-hint='~history-hint' anchor-min-x='0' anchor-min-y='0' anchor-max-x='1' anchor-max-y='1' min-width='32' active='~is-active-button'></button>
+      <vertical pad-top='8' pad-bottom='8'>
+        <button text='~skip-button-text' interactable='~skip-button-enable' hover-hint='Remove the selected request from the queue.' on-click='skip-click' anchor-min-x='0' anchor-min-y='0' anchor-max-x='1' anchor-max-y='1' min-width='32' active='~is-active-button'></button>
+        <button text='~blacklist-button-text' interactable='~blacklist-button-enable' hover-hint='Block the selected request from being queued in the future.' on-click='blacklist-click' anchor-min-x='0' anchor-min-y='0' anchor-max-x='1' anchor-max-y='1' min-width='32' active='~is-active-button'></button>
+        <button id='play-button' text='~play-button-text' interactable='~play-button-enable' hover-hint='Download and scroll to the currently selected request.' on-click='play-click' anchor-min-x='0' anchor-min-y='0' anchor-max-x='1' anchor-max-y='1' min-width='32' active='~is-active-button'></button>
+      </vertical>
+      <button id='queue-button' text='~queue-button-text' hover-hint='Open/Close the queue.' on-click='queue-click' min-width='32' active='~is-active-button'></button>
+    </vertical>
+  </horizontal>
+  <modal id="modal" show-event='open-modal' hide-event='close-modal' clickerino-offerino-closerino="false" size-delta-x='90' size-delta-y='45' move-to-center='true'>
+    <vertical child-control-height='false' child-expand-width='true' child-expand-height='true'>
+      <horizontal bg='panel-top' pad-left='10' pad-right='10' horizontal-fit='PreferredSize' child-align='UpperCenter'>
+        <text text='~title' align='Center'></text>
+      </horizontal>
+    </vertical>
+    <vertical child-align='LowerCenter' horizontal-fit='Unconstrained' pad-top='10'>
+      <text text='~message' align='Center' anchor-min-y='0'></text>
+      <horizontal child-align='LowerCenter'>
+        <button on-click='yes-click' text='Yes'></button>
+        <button on-click='no-click' text='No'></button>
+      </horizontal>
+    </vertical>
+  </modal>
+</bg>
