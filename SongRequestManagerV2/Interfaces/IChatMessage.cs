@@ -1,4 +1,4 @@
-﻿using CatCore.Models.Shared;
+using ChatCore.Interfaces;
 
 namespace SongRequestManagerV2.Interfaces
 {
