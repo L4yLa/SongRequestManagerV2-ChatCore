@@ -245,23 +245,7 @@ namespace SongRequestManagerV2.Bots
             try {
                 var requesterText = obj["requestor"].Value;
                 var userObj = JSONNode.Parse(requesterText);
-                var badges = userObj["Badges"].AsArray;
-                var badgeList = new List<IChatBadge>();
-                foreach (var badge in badges.Children) {
-                    var tmp = new TwitchBadge(badge["Id"].Value, badge["Name"].Value, badge["Uri"].Value);
-                    badgeList.Add(tmp);
-                }
-                var temp = new TwitchUser(
-                    userObj["Id"].Value,
-                    userObj["UserName"].Value,
-                    userObj["DisplayName"].Value,
-                    userObj["Color"].Value,
-                    userObj["IsModerator"].AsBool,
-                    userObj["IsBroadcaster"].AsBool,
-                    userObj["IsSubscriber"].AsBool,
-                    userObj["IsTurbo"].AsBool,
-                    userObj["IsVip"],
-                    new ReadOnlyCollection<IChatBadge>(badgeList));
+                var temp = new TwitchUser(userObj.ToString());
                 return temp;
             }
             catch (Exception e) {

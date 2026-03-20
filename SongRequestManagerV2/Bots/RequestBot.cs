@@ -354,7 +354,7 @@ namespace SongRequestManagerV2.Bots
                 var twitchService = this.ChatManager.MultiplexerInstance?.GetTwitchService();
                 if (twitchService != null) {
                     foreach (var channel in twitchService.Channels.Values) {
-                        twitchService.SendTextMessage(System.Reflection.Assembly.GetExecutingAssembly(), message, channel.Id);
+                        twitchService.SendTextMessage(message, channel);
                     }
                 }
             }
@@ -765,7 +765,7 @@ namespace SongRequestManagerV2.Bots
         public IChatUser GetLoginUser()
         {
             var isInit = CurrentUser != null;
-            var obj = new
+            return new GenericChatUser
             {
                 Id = isInit ? CurrentUser.platformUserId : "",
                 UserName = isInit ? CurrentUser.userName : "",
@@ -773,10 +773,7 @@ namespace SongRequestManagerV2.Bots
                 Color = "#FFFFFFFF",
                 IsBroadcaster = true,
                 IsModerator = false,
-                IsSubscriber = false,
-                Badges = Array.Empty<IChatBadge>()
             };
-            return new TwitchUser(obj.Id, obj.UserName, obj.DisplayName, obj.Color, obj.IsModerator, obj.IsBroadcaster, obj.IsSubscriber, false, false, new System.Collections.ObjectModel.ReadOnlyCollection<IChatBadge>(obj.Badges));
         }
         public void Parse(IChatUser user, string request, CmdFlags flags = 0, string info = "")
         {
