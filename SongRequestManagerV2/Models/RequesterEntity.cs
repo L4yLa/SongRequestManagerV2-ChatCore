@@ -1,5 +1,5 @@
-﻿
-using CatCore.Models.Shared;
+
+using ChatCore.Interfaces;
 using SongRequestManagerV2.SimpleJsons;
 
 namespace SongRequestManagerV2.Models

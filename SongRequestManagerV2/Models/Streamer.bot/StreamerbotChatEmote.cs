@@ -1,4 +1,4 @@
-﻿using CatCore.Models.Shared;
+using ChatCore.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Text;

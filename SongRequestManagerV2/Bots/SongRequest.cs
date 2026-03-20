@@ -1,7 +1,6 @@
-﻿using BeatSaberMarkupLanguage.Attributes;
-using CatCore.Models.Shared;
-using CatCore.Models.Twitch.IRC;
-using CatCore.Models.Twitch.Media;
+using BeatSaberMarkupLanguage.Attributes;
+using ChatCore.Interfaces;
+using ChatCore.Models.Twitch;
 using HMUI;
 using Newtonsoft.Json;
 using SongCore;

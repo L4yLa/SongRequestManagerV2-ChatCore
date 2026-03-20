@@ -1,6 +1,5 @@
-﻿using CatCore.Models.Shared;
-using CatCore.Models.Twitch.IRC;
-using CatCore.Services.Multiplexer;
+using ChatCore.Interfaces;
+using ChatCore.Models.Twitch;
 using IPA.Loader;
 using SongRequestManagerV2.Bases;
 using SongRequestManagerV2.Configuration;
@@ -227,20 +226,6 @@ namespace SongRequestManagerV2.Bots
             return this.ListCollectionManager.Contains(excludefilename, msg.Sender.UserName.ToLower(), ListFlags.Uncached);
         }
 
-        internal void RecievedMessages(MultiplexedMessage msg)
-        {
-            Logger.Debug($"Received Message : {msg.Message}");
-#if DEBUG
-            var stopwatch = new Stopwatch();
-            stopwatch.Start();
-#endif
-            this.Parse(msg.Sender, msg.Message.Replace("！", "!"));
-#if DEBUG
-            stopwatch.Stop();
-            Logger.Debug($"{stopwatch.ElapsedMilliseconds} ms");
-#endif
-        }
-
         internal void RecievedMessages(IChatMessage msg)
         {
             Logger.Debug($"Received Message : {msg.Message}");
@@ -366,9 +351,10 @@ namespace SongRequestManagerV2.Bots
             try {
                 Logger.Debug($"Sending message: \"{message}\"");
 
-                if (this.ChatManager.TwitchChannelManagementService != null) {
-                    foreach (var channel in this.ChatManager.TwitchChannelManagementService.GetAllActiveChannels()) {
-                        channel.SendMessage($"{message}");
+                var twitchService = this.ChatManager.MultiplexerInstance?.GetTwitchService();
+                if (twitchService != null) {
+                    foreach (var channel in twitchService.Channels.Values) {
+                        twitchService.SendTextMessage(System.Reflection.Assembly.GetExecutingAssembly(), message, channel.Id);
                     }
                 }
             }
@@ -778,41 +764,19 @@ namespace SongRequestManagerV2.Bots
 
         public IChatUser GetLoginUser()
         {
-            if (this.ChatManager.OwnUserData != null) {
-                var user = this.ChatManager.OwnUserData;
-                var obj = new
-                {
-                    Id = user.UserId,
-                    UserName = user.UserId,
-                    user.DisplayName,
-                    user.Color,
-                    IsBroadcaster = true,
-                    user.IsModerator,
-                    user.IsSubscriber,
-                    user.IsTurbo,
-                    user.IsVip,
-                    Badges = Array.Empty<IChatBadge>()
-                };
-                return new TwitchUser(obj.Id, obj.UserName, obj.DisplayName, obj.Color, obj.IsModerator, obj.IsBroadcaster, obj.IsSubscriber, obj.IsTurbo, obj.IsVip, new System.Collections.ObjectModel.ReadOnlyCollection<IChatBadge>(obj.Badges));
-            }
-            else {
-                var isInit = CurrentUser != null;
-
-                var obj = new
-                {
-                    Id = isInit ? CurrentUser.platformUserId : "",
-                    UserName = isInit ? CurrentUser.userName : "",
-                    DisplayName = isInit ? CurrentUser.userName : "",
-                    Color = "#FFFFFFFF",
-                    IsBroadcaster = true,
-                    IsModerator = false,
-                    IsSubscriber = false,
-                    IsPro = false,
-                    IsStaff = false,
-                    Badges = Array.Empty<IChatBadge>()
-                };
-                return new TwitchUser(obj.Id, obj.UserName, obj.DisplayName, obj.Color, obj.IsModerator, obj.IsBroadcaster, obj.IsSubscriber, false, false, new System.Collections.ObjectModel.ReadOnlyCollection<IChatBadge>(obj.Badges));
-            }
+            var isInit = CurrentUser != null;
+            var obj = new
+            {
+                Id = isInit ? CurrentUser.platformUserId : "",
+                UserName = isInit ? CurrentUser.userName : "",
+                DisplayName = isInit ? CurrentUser.userName : "",
+                Color = "#FFFFFFFF",
+                IsBroadcaster = true,
+                IsModerator = false,
+                IsSubscriber = false,
+                Badges = Array.Empty<IChatBadge>()
+            };
+            return new TwitchUser(obj.Id, obj.UserName, obj.DisplayName, obj.Color, obj.IsModerator, obj.IsBroadcaster, obj.IsSubscriber, false, false, new System.Collections.ObjectModel.ReadOnlyCollection<IChatBadge>(obj.Badges));
         }
         public void Parse(IChatUser user, string request, CmdFlags flags = 0, string info = "")
         {

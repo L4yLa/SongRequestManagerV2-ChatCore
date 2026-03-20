@@ -1,5 +1,5 @@
-﻿using CatCore.Models.Shared;
-using CatCore.Models.Twitch.IRC;
+using ChatCore.Interfaces;
+using ChatCore.Models.Twitch;
 using SongRequestManagerV2.SimpleJsons;
 
 namespace SongRequestManagerV2.Extentions
