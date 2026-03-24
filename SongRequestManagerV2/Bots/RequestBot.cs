@@ -1,8 +1,6 @@
 using ChatCore.Interfaces;
 using ChatCore.Models.Twitch;
 using IPA.Loader;
-using PlatformUserModel;
-using SiraUtil.Interfaces;
 using SongRequestManagerV2.Bases;
 using SongRequestManagerV2.Configuration;
 using SongRequestManagerV2.Extentions;
@@ -46,7 +44,8 @@ namespace SongRequestManagerV2.Bots
         public static System.Random Generator { get; } = new System.Random(Environment.TickCount); // BUG: Should at least seed from unity?
         public static List<JSONObject> Played { get; private set; } = new List<JSONObject>(); // Played list
         public static List<BotEvent> Events { get; } = new List<BotEvent>();
-        public static UserInfo CurrentUser { get; private set; }
+        public static IChatUser CurrentUser { get; private set; }
+        private static readonly object s_currentUserLock = new object();
 
         private static StringListManager s_mapperwhitelist = new StringListManager(); // BUG: This needs to switch to list manager interface
         private static StringListManager s_mapperBanlist = new StringListManager(); // BUG: This needs to switch to list manager interface
@@ -115,7 +114,7 @@ namespace SongRequestManagerV2.Bots
         private static readonly string s_success = "";
         #region 構築・破棄
         [Inject]
-        protected void Constractor(IUserInfo userInfo)
+        protected void Constractor()
         {
             Logger.Debug("Constractor call");
             if (RequestBotConfig.Instance.PPSearch) {
@@ -126,13 +125,6 @@ namespace SongRequestManagerV2.Bots
                 });
             }
             this.Setup();
-            if (CurrentUser == null) {
-                CurrentUser = new UserInfo
-                {
-                    platformUserId = userInfo.platformUserId,
-                    userName = userInfo.userName
-                };
-            }
         }
         public void Initialize()
         {
@@ -140,6 +132,28 @@ namespace SongRequestManagerV2.Bots
             SceneManager.activeSceneChanged += this.SceneManager_activeSceneChanged;
             this._timer.Elapsed += this.Timer_Elapsed;
             this._timer.Start();
+            var twitchService = this.ChatManager.MultiplexerInstance?.GetTwitchService();
+            if (twitchService != null) {
+                twitchService.OnLogin += this.OnTwitchLogin;
+            }
+        }
+
+        private void OnTwitchLogin(IChatService svc)
+        {
+            lock (s_currentUserLock) {
+                if (CurrentUser == null) {
+                    CurrentUser = new GenericChatUser
+                    {
+                        Id = svc.DisplayName,
+                        UserName = svc.DisplayName,
+                        DisplayName = svc.DisplayName,
+                        Color = "#FFFFFFFF",
+                        IsBroadcaster = true,
+                        IsModerator = false,
+                    };
+                    Logger.Debug($"Login user set from ChatCore: {svc.DisplayName}");
+                }
+            }
         }
 
         protected virtual void Dispose(bool disposing)
@@ -151,6 +165,10 @@ namespace SongRequestManagerV2.Bots
                     this._timer.Dispose();
                     SceneManager.activeSceneChanged -= this.SceneManager_activeSceneChanged;
                     RequestBotConfig.Instance.ConfigChangedEvent -= this.OnConfigChangedEvent;
+                    var twitchService = this.ChatManager.MultiplexerInstance?.GetTwitchService();
+                    if (twitchService != null) {
+                        twitchService.OnLogin -= this.OnTwitchLogin;
+                    }
                 }
                 this._disposedValue = true;
             }
@@ -767,12 +785,11 @@ namespace SongRequestManagerV2.Bots
 
         public IChatUser GetLoginUser()
         {
-            var isInit = CurrentUser != null;
-            return new GenericChatUser
+            return CurrentUser ?? new GenericChatUser
             {
-                Id = isInit ? CurrentUser.platformUserId : "",
-                UserName = isInit ? CurrentUser.userName : "",
-                DisplayName = isInit ? CurrentUser.userName : "",
+                Id = "",
+                UserName = "",
+                DisplayName = "",
                 Color = "#FFFFFFFF",
                 IsBroadcaster = true,
                 IsModerator = false,
