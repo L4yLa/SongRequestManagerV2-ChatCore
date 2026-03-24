@@ -1,6 +1,7 @@
 using ChatCore.Interfaces;
 using ChatCore.Models.Twitch;
 using IPA.Loader;
+using PlatformUserModel;
 using SongRequestManagerV2.Bases;
 using SongRequestManagerV2.Configuration;
 using SongRequestManagerV2.Extentions;

@@ -1,4 +1,4 @@
-﻿using SiraUtil.Interfaces;
+﻿using BGLib.Polyglot;
 using Zenject;
 
 namespace SongRequestManagerV2.Localizes
@@ -8,17 +8,16 @@ namespace SongRequestManagerV2.Localizes
     /// </summary>
     public class LocalizeController : IInitializable
     {
-        private readonly ILocalizer _localizer;
-
-        public LocalizeController([InjectOptional(Id = "SIRA.Localizer")] ILocalizer localizer)
-        {
-            this._localizer = localizer;
-        }
-
         public void Initialize()
         {
-            Logger.Debug($"{this._localizer}:{this._localizer.GetType()}");
-            _ = (this._localizer?.AddLocalizationSheetFromAssembly("SongRequestManagerV2.Resources.localize.csv", BGLib.Polyglot.GoogleDriveDownloadFormat.CSV));
+            // ILocalizer (SiraUtil.Interfaces) was removed in SiraUtil 3.x.
+            // Use BGLib.Polyglot.LocalizationImporter directly.
+            var stream = System.Reflection.Assembly.GetExecutingAssembly()
+                .GetManifestResourceStream("SongRequestManagerV2.Resources.localize.csv");
+            if (stream != null) {
+                using var reader = new System.IO.StreamReader(stream);
+                LocalizationImporter.ImportDataFromCSV(reader.ReadToEnd(), LocalizationImporter.GetLanguageCodes());
+            }
         }
     }
 }
