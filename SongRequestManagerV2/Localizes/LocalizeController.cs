@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using BGLib.Polyglot;
 using UnityEngine;
 using Zenject;
@@ -17,9 +18,15 @@ namespace SongRequestManagerV2.Localizes
             if (stream != null) {
                 using var reader = new System.IO.StreamReader(stream);
                 var csvText = reader.ReadToEnd();
+                var localizationAsset = (LocalizationAsset)Activator.CreateInstance(
+                    typeof(LocalizationAsset),
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic,
+                    null,
+                    new object[] { new TextAsset(csvText) },
+                    null);
                 var inputFiles = new List<LocalizationAsset>(Localization.Instance.inputFiles)
                 {
-                    new LocalizationAsset { asset = new TextAsset(csvText) }
+                    localizationAsset
                 };
                 LocalizationImporter.ImportFromFiles(inputFiles);
             }
