@@ -2,7 +2,7 @@
   "$schema": "https://raw.githubusercontent.com/beat-saber-modding-group/BSIPA-MetadataFileSchema/master/Schema.json",
   "author": "L4yLa",
   "description": 'Song Request Manager on twitch. The original code by @denpadokei. This version chat integration with ChatCore (Not "Cat").',
-  "gameVersion": "1.39.1",
+  "gameVersion": "1.42.2",
   "id": "SongRequestManagerV2",
   "name": "Song Request Manager V2 (ChatCore)",
   "version": "1.0.0",
