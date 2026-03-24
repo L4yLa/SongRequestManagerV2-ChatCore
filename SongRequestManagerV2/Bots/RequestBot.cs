@@ -2,6 +2,7 @@ using ChatCore.Interfaces;
 using ChatCore.Models.Twitch;
 using IPA.Loader;
 using PlatformUserModel;
+using SiraUtil.Interfaces;
 using SongRequestManagerV2.Bases;
 using SongRequestManagerV2.Configuration;
 using SongRequestManagerV2.Extentions;
@@ -114,7 +115,7 @@ namespace SongRequestManagerV2.Bots
         private static readonly string s_success = "";
         #region 構築・破棄
         [Inject]
-        protected void Constractor(IPlatformUserModel platformUserModel)
+        protected void Constractor(IUserInfo userInfo)
         {
             Logger.Debug("Constractor call");
             if (RequestBotConfig.Instance.PPSearch) {
@@ -126,10 +127,11 @@ namespace SongRequestManagerV2.Bots
             }
             this.Setup();
             if (CurrentUser == null) {
-                platformUserModel.GetUserInfo(CancellationToken.None).Await(r =>
+                CurrentUser = new UserInfo
                 {
-                    CurrentUser = r;
-                });
+                    platformUserId = userInfo.platformUserId,
+                    userName = userInfo.userName
+                };
             }
         }
         public void Initialize()
