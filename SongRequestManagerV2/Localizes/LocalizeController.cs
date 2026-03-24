@@ -19,7 +19,7 @@ namespace SongRequestManagerV2.Localizes
                 var csvText = reader.ReadToEnd();
                 var inputFiles = new List<LocalizationAsset>(Localization.Instance.inputFiles)
                 {
-                    new LocalizationAsset(new TextAsset(csvText))
+                    new LocalizationAsset { asset = new TextAsset(csvText) }
                 };
                 LocalizationImporter.ImportFromFiles(inputFiles);
             }
