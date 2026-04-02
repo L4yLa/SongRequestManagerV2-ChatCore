@@ -62,7 +62,7 @@ namespace SongRequestManagerV2
             }
         }
 
-        private static readonly int RETRY_COUNT = 5;
+        private static readonly int RETRY_COUNT = 3;
 
         private static void Connect()
         {
@@ -141,7 +141,7 @@ namespace SongRequestManagerV2
 #endif
                         var req = new HttpRequestMessage(methodType, url);
                         if (retryCount != 0) {
-                            await Task.Delay(1000);
+                            await Task.Delay(500);
                         }
                         retryCount++;
                         resp = await Client.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, token).ConfigureAwait(false);
@@ -151,7 +151,7 @@ namespace SongRequestManagerV2
                         Logger.Error($"resp code : {resp?.StatusCode}");
                         Logger.Error(e);
                     }
-                } while (resp?.StatusCode != HttpStatusCode.NotFound && resp?.IsSuccessStatusCode != true && retryCount <= RETRY_COUNT);
+                } while (resp?.StatusCode != HttpStatusCode.NotFound && resp?.IsSuccessStatusCode != true && retryCount < RETRY_COUNT);
 
                 if (token.IsCancellationRequested) {
                     throw new TaskCanceledException();
@@ -159,7 +159,7 @@ namespace SongRequestManagerV2
 
                 using (var memoryStream = new MemoryStream())
                 using (var stream = await resp.Content.ReadAsStreamAsync().ConfigureAwait(false)) {
-                    var buffer = new byte[8192];
+                    var buffer = new byte[81920];
                     var bytesRead = 0;
 
                     var contentLength = resp?.Content.Headers.ContentLength;
@@ -167,6 +167,7 @@ namespace SongRequestManagerV2
 
                     // send report
                     progress?.Report(0);
+                    var lastReported = 0d;
 
                     while ((bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length).ConfigureAwait(false)) > 0) {
                         if (token.IsCancellationRequested) {
@@ -174,7 +175,11 @@ namespace SongRequestManagerV2
                         }
 
                         if (contentLength != null) {
-                            progress?.Report(totalRead / (double)contentLength);
+                            var current = totalRead / (double)contentLength;
+                            if (current - lastReported >= 0.05) {
+                                progress?.Report(current);
+                                lastReported = current;
+                            }
                         }
 
                         await memoryStream.WriteAsync(buffer, 0, bytesRead).ConfigureAwait(false);

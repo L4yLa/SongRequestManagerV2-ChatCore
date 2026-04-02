@@ -134,6 +134,12 @@ namespace SongRequestManagerV2.Bots
             this._downloadURL = this.SongVersion["downloadURL"].Value
                 .Replace(RequestBot.BEATMAPS_AS_CDN_ROOT_URL, RequestBot.BEATMAPS_CDN_ROOT_URL)
                 .Replace(RequestBot.BEATMAPS_NA_CDN_ROOT_URL, RequestBot.BEATMAPS_CDN_ROOT_URL);
+            if (!this._downloadURL.StartsWith(RequestBot.BEATMAPS_CDN_ROOT_URL)) {
+                try {
+                    Logger.Debug($"Unknown CDN domain: {new Uri(this._downloadURL).Host}");
+                }
+                catch (Exception) { }
+            }
             if (this._mapDatabase.PPMap.TryGetValue(this.ID, out var pp)) {
                 this.SongNode.Add("pp", new JSONNumber(pp));
             }
