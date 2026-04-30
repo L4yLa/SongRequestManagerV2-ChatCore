@@ -1,3 +1,11 @@
+// Modified: 2026-04-02
+// Changes:
+//   - Replaced CatCore dependencies with ChatCore equivalents
+//   - Added `using ChatCore.Utilities`
+//   - Added Uri, IsAnimated, Type, UVs properties (IChatEmote interface compliance)
+//   - Renamed Url property to Uri
+//   - Renamed Animated property to IsAnimated
+//   - Added ToJson() method
 using ChatCore.Interfaces;
 using ChatCore.Models;
 using ChatCore.Utilities;

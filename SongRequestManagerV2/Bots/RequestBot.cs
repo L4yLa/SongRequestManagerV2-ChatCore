@@ -1,3 +1,12 @@
+// Modified: 2026-04-02
+// Changes:
+//   - Replaced CatCore dependencies with ChatCore equivalents
+//   - Removed IPlatformUserModel dependency
+//   - Changed CurrentUser type from UserInfo to IChatUser with thread-safe lock
+//   - Added OnTwitchLogin event handler to retrieve login user
+//   - Updated SendChatMessage to use ChatCore SendTextMessage API
+//   - Removed RecievedMessages(MultiplexedMessage) overload
+//   - Simplified GetLoginUser to use CurrentUser-based implementation
 using ChatCore.Interfaces;
 using ChatCore.Models.Twitch;
 using IPA.Loader;

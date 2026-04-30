@@ -1,4 +1,8 @@
-﻿using System;
+﻿// Modified: 2026-03-20
+// Changes:
+//   - Removed SiraUtil.ILocalizer dependency
+//   - Changed localization CSV loading to read directly from Assembly resource
+using System;
 using System.Collections.Generic;
 using BGLib.Polyglot;
 using UnityEngine;

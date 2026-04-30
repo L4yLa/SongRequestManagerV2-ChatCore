@@ -1,3 +1,9 @@
+// Modified: 2026-04-02
+// Changes:
+//   - Replaced CatCore dependencies with ChatCore equivalents
+//   - Added `using ChatCore.Utilities`
+//   - Changed ToJson() from private to public with implementation
+//   - Added property default values
 
 using ChatCore.Interfaces;
 using ChatCore.Utilities;
