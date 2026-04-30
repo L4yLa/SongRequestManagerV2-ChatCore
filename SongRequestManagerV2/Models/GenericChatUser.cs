@@ -1,3 +1,10 @@
+// Modified: 2026-04-02
+// Changes:
+//   - Replaced CatCore dependencies with ChatCore equivalents
+//   - Added `using ChatCore.Utilities`
+//   - Added Badges property
+//   - Added ToJson() method
+//   - Added property default values
 using ChatCore.Interfaces;
 using ChatCore.Utilities;
 using System;

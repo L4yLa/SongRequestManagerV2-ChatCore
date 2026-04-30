@@ -1,3 +1,7 @@
+// Modified: 2026-03-20
+// Changes:
+//   - Replaced `using CatCore.Models.Shared` with `using ChatCore.Interfaces`
+//   - Replaced `using CatCore.Models.Twitch.IRC` with `using ChatCore.Models.Twitch`
 using ChatCore.Interfaces;
 using ChatCore.Models.Twitch;
 using SongRequestManagerV2.SimpleJsons;

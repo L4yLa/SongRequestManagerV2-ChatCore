@@ -1,3 +1,12 @@
+// Modified: 2026-04-02
+// Changes:
+//   - Replaced CatCore dependencies with ChatCore equivalents
+//   - Renamed CatCoreInstance to ChatCoreInstance
+//   - Changed MultiplexedMessage/MultiplexedChannel to IChatMessage/IChatChannel
+//   - Removed CatCore-specific service properties (TwitchChannelManagementService, etc.)
+//   - Changed OnChatConnected event to OnJoinChannel
+//   - Added StopAllServices() call in Dispose
+//   - Removed commented-out code
 using ChatCore;
 using ChatCore.Interfaces;
 using ChatCore.Services;

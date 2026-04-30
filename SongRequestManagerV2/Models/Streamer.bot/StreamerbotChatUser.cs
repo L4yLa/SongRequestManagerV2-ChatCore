@@ -1,3 +1,9 @@
+// Modified: 2026-03-20
+// Changes:
+//   - Replaced CatCore dependencies with ChatCore equivalents
+//   - Added Badges property
+//   - Added ToJson() method
+//   - Qualified JSON.Parse as SimpleJsons.JSON.Parse
 using ChatCore.Interfaces;
 using ChatCore.Utilities;
 using System;

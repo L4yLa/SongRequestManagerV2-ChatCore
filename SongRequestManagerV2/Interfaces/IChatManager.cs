@@ -1,3 +1,9 @@
+// Modified: 2026-04-02
+// Changes:
+//   - Replaced CatCore dependencies with ChatCore equivalents
+//   - Renamed CatCoreInstance to ChatCoreInstance
+//   - Changed MultiplexedMessage to IChatMessage
+//   - Removed ITwitchService, ITwitchChannelManagementService, ITwitchUserStateTrackerService, and OwnUserData properties
 using ChatCore;
 using ChatCore.Interfaces;
 using ChatCore.Services;

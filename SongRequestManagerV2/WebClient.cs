@@ -1,4 +1,10 @@
-﻿using SongRequestManagerV2.SimpleJsons;
+﻿// Modified: 2026-04-30
+// Changes:
+//   - Reduced RETRY_COUNT from 5 to 2
+//   - Increased download buffer size from 8192 to 81920 bytes
+//   - Changed progress reporting to throttle at 5% intervals
+//   - Fixed loop condition from <= to <
+using SongRequestManagerV2.SimpleJsons;
 using System;
 using System.IO;
 using System.Net;
