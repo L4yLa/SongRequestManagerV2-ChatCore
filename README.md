@@ -1,3 +1,12 @@
+# Copyrights
+[SongRequestManager](https://github.com/angturil/SongRequestManager)  
+© 2018 angturil
+
+and
+
+[SongRequestManagerV2](https://github.com/denpadokei/SongRequestManagerV2)  
+© 2025 denpadokei
+
 # SongRequestManagerV2-ChatCore
 [@denpadokei/SongRequestManagerV2](https://github.com/denpadokei/SongRequestManagerV2) を ChatCore 依存に改変したものです。
 
