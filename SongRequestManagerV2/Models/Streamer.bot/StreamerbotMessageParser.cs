@@ -1,4 +1,8 @@
-﻿using ChatCore.Interfaces;
+﻿// Modified: 2026-03-20
+// Changes:
+//   - Replaced CatCore dependencies with ChatCore (using directives updated)
+//   - Changed sbemote.Url to sbemote.Uri
+using ChatCore.Interfaces;
 using SongRequestManagerV2.Configuration;
 using SongRequestManagerV2.SimpleJsons;
 using System;
