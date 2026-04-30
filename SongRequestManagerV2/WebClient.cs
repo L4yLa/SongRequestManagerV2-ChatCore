@@ -62,7 +62,7 @@ namespace SongRequestManagerV2
             }
         }
 
-        private static readonly int RETRY_COUNT = 3;
+        private static readonly int RETRY_COUNT = 2;
 
         private static void Connect()
         {
@@ -141,7 +141,7 @@ namespace SongRequestManagerV2
 #endif
                         var req = new HttpRequestMessage(methodType, url);
                         if (retryCount != 0) {
-                            await Task.Delay(500);
+                            await Task.Delay(1000);
                         }
                         retryCount++;
                         resp = await Client.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, token).ConfigureAwait(false);
