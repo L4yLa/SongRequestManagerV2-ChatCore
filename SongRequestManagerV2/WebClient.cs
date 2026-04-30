@@ -1,7 +1,6 @@
-﻿// Modified: 2026-04-02
+﻿// Modified: 2026-04-30
 // Changes:
-//   - Reduced RETRY_COUNT from 5 to 3
-//   - Reduced retry delay from 1000ms to 500ms
+//   - Reduced RETRY_COUNT from 5 to 2
 //   - Increased download buffer size from 8192 to 81920 bytes
 //   - Changed progress reporting to throttle at 5% intervals
 //   - Fixed loop condition from <= to <
