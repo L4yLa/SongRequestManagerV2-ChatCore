@@ -1,3 +1,6 @@
+// Modified: 2026-03-20
+// Changes:
+//   - Replaced using CatCore.Models.Shared/CatCore.Models.Twitch.IRC with using ChatCore.Interfaces/ChatCore.Models.Twitch
 using ChatCore.Interfaces;
 using ChatCore.Models.Twitch;
 using SongRequestManagerV2.Configuration;

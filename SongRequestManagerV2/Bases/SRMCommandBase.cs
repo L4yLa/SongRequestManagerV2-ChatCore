@@ -1,3 +1,6 @@
+// Modified: 2026-03-20
+// Changes:
+//   - Replaced using CatCore.Models.Shared with using ChatCore.Interfaces
 using ChatCore.Interfaces;
 using SongRequestManagerV2.Interfaces;
 using SongRequestManagerV2.Models;

@@ -1,3 +1,9 @@
+// Modified: 2026-03-20
+// Changes:
+//   - Replaced CatCore dependencies with ChatCore (using directives updated)
+//   - Added Channel property
+//   - Added Metadata property (ReadOnlyDictionary<string, string>)
+//   - Added default property values
 using ChatCore.Interfaces;
 using ChatCore.Utilities;
 using System.Collections.Generic;

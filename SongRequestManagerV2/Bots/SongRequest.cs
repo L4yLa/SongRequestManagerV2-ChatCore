@@ -1,3 +1,8 @@
+// Modified: 2026-04-02
+// Changes:
+//   - Replaced CatCore dependencies with ChatCore (using directives updated)
+//   - Simplified TwitchUser constructor call to JSON-based approach
+//   - Added debug logging for unknown CDN domains
 using BeatSaberMarkupLanguage.Attributes;
 using ChatCore.Interfaces;
 using ChatCore.Models.Twitch;

@@ -1,3 +1,9 @@
+// Modified: 2026-03-20
+// Changes:
+//   - Replaced CatCore dependencies with ChatCore (using directives updated)
+//   - Removed RecievedMessages(MultiplexedMessage) overload
+//   - Updated SendChatMessage to use ChatCore SendTextMessage API
+//   - Replaced GetLoginUser OwnUserData dependency with GenericChatUser-based implementation
 using ChatCore.Interfaces;
 using ChatCore.Models.Twitch;
 using IPA.Loader;
