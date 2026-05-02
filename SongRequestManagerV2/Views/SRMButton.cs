@@ -13,6 +13,7 @@ using SongRequestManagerV2.UI;
 using SongRequestManagerV2.Utils;
 using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -240,10 +241,10 @@ namespace SongRequestManagerV2.Views
                 if (request == null) {
                     return;
                 }
-                var currentSongDirectory = this.CreateSongDirectory(request);
                 var songHash = request.SongVersion["hash"].Value.ToUpper();
 
                 if (Loader.GetLevelByHash(songHash) == null) {
+                    var currentSongDirectory = this.CreateSongDirectory(request);
                     var result = await request.DownloadZip(CancellationToken.None, this.DownloadProgress);
                     if (result == null) {
                         this._chatManager.QueueChatMessage("beatsaver is down now.");
@@ -315,22 +316,26 @@ namespace SongRequestManagerV2.Views
             }
             else {
                 yield return new WaitWhile(() => !Loader.AreSongsLoaded && Loader.AreSongsLoading);
-                Loader.Instance.RefreshSongs(false);
-                yield return new WaitWhile(() => !Loader.AreSongsLoaded && Loader.AreSongsLoading);
-                Utility.EmptyDirectory(".requestcache", true);
-
-                Dispatcher.RunOnMainThread(() => this.BackButtonPressed());
-                Dispatcher.RunCoroutine(this._songListUtils.ScrollToLevel($"custom_level_{request.SongVersion["hash"].Value.ToLower()}", () =>
+                void OnSongsLoaded(Loader loader, ConcurrentDictionary<string, BeatmapLevel> songs)
                 {
-                    this._bot.UpdateRequestUI();
-                },
-                request.IsWIP));
+                    Loader.SongsLoadedEvent -= OnSongsLoaded;
+                    Utility.EmptyDirectory(".requestcache", true);
 
-                ((IProgress<double>)this.DownloadProgress).Report(0d);
-                if (!request.SongNode.IsNull) {
-                    // Display next song message
-                    _ = this._textFactory.Create().AddUser(request.Requestor).AddSong(request.SongNode).QueueMessage(StringFormat.NextSonglink.ToString());
+                    Dispatcher.RunOnMainThread(() => this.BackButtonPressed());
+                    Dispatcher.RunCoroutine(this._songListUtils.ScrollToLevel($"custom_level_{request.SongVersion["hash"].Value.ToLower()}", () =>
+                    {
+                        this._bot.UpdateRequestUI();
+                    },
+                    request.IsWIP));
+
+                    ((IProgress<double>)this.DownloadProgress).Report(0d);
+                    if (!request.SongNode.IsNull) {
+                        // Display next song message
+                        _ = this._textFactory.Create().AddUser(request.Requestor).AddSong(request.SongNode).QueueMessage(StringFormat.NextSonglink.ToString());
+                    }
                 }
+                Loader.SongsLoadedEvent += OnSongsLoaded;
+                Loader.Instance.RefreshSongs(false);
             }
         }
 
