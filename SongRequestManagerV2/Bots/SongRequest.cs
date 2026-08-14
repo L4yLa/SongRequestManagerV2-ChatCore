@@ -3,6 +3,11 @@
 //   - Replaced CatCore dependencies with ChatCore (using directives updated)
 //   - Simplified TwitchUser constructor call to JSON-based approach
 //   - Added debug logging for unknown CDN domains
+// Modified: 2026-08-14
+// Changes:
+//   - Attach the queue cell HoverHint to the cell root object instead of
+//     relying on the BSML `hover-hint` binding on the `tags='hovered'` background,
+//     which never receives pointer events (requester info was not shown)
 using BeatSaberMarkupLanguage.Attributes;
 using ChatCore.Interfaces;
 using ChatCore.Models.Twitch;
@@ -41,6 +46,12 @@ namespace SongRequestManagerV2.Bots
         [UIComponent("authorNameText")]
         public TextMeshProUGUI _authorNameText;
 
+        // [2026-08-14] BSML が生成するカスタムセルのルート GameObject 名（BSML 1.7～1.14）
+        private const string CELL_OBJECT_NAME = "BSMLCustomTableCell";
+
+        // [2026-08-14] セルルートに付与した HoverHint
+        private HoverHint _cellHoverHint;
+
         [Inject]
         private readonly DynamicText.DynamicTextFactory _textFactory;
         [Inject]
@@ -48,7 +59,6 @@ namespace SongRequestManagerV2.Bots
 
         /// <summary>説明 を取得、設定</summary>
         private string hint_;
-        /// <summary>説明 を取得、設定</summary>
         [UIValue("hover-hint")]
         public string Hint
         {
@@ -57,9 +67,7 @@ namespace SongRequestManagerV2.Bots
             set => this.SetProperty(ref this.hint_, value);
         }
 
-        /// <summary>説明 を取得、設定</summary>
         private string songName_;
-        /// <summary>説明 を取得、設定</summary>
         [UIValue("song-name")]
         public string SongName
         {
@@ -68,9 +76,7 @@ namespace SongRequestManagerV2.Bots
             set => this.SetProperty(ref this.songName_, value);
         }
 
-        /// <summary>説明 を取得、設定</summary>
         private string authorName_;
-        /// <summary>説明 を取得、設定</summary>
         [UIValue("author-name")]
         public string AuthorName
         {
@@ -161,7 +167,43 @@ namespace SongRequestManagerV2.Bots
                 : $" <size=50%>{Utility.GetRating(this.SongNode)}</size>";
             _ = builder.Append(this._rating);
             this.SongName = builder.ToString();
+            this.SetupHoverHint();
             this.SetCover();
+        }
+
+        /// <summary>
+        /// セルのルート GameObject に HoverHint を付与する。
+        /// bsml 側の hover-hint バインドは tags='hovered' の背景に付与されるが、
+        /// この背景はレイキャスト対象にならないため PointerEnter が届かず、
+        /// リクエスト者情報が表示されない。セルルートは Touchable を持ち
+        /// ポインタイベントを確実に受け取れるため、そちらに付け替える。
+        /// </summary>
+        private void SetupHoverHint()
+        {
+            try {
+                if (this._coverImage == null) {
+                    return;
+                }
+                // CustomCellTableCell を型で参照すると基底型チェーンの都合で
+                // Interactable アセンブリ参照が必要になるため、名前でセルルートを遡る。
+                GameObject cellObject = null;
+                for (var t = this._coverImage.transform; t != null; t = t.parent) {
+                    if (t.name == CELL_OBJECT_NAME) {
+                        cellObject = t.gameObject;
+                        break;
+                    }
+                }
+                if (cellObject == null) {
+                    return;
+                }
+                if (!cellObject.TryGetComponent(out this._cellHoverHint)) {
+                    this._cellHoverHint = BeatSaberMarkupLanguage.BeatSaberUI.DiContainer.InstantiateComponent<HoverHint>(cellObject);
+                }
+                this._cellHoverHint.text = this.Hint;
+            }
+            catch (Exception e) {
+                Logger.Error(e);
+            }
         }
 
         [UIAction("selected")]
@@ -193,6 +235,9 @@ namespace SongRequestManagerV2.Bots
                     _ = dt.Add("RequestTime", this.RequestTime.ToLocalTime().ToString("hh:mm"));
                     this.AuthorName = dt.Parse(StringFormat.QueueListRow2);
                     this.Hint = dt.Parse(StringFormat.SongHintText);
+                    if (this._cellHoverHint != null) {
+                        this._cellHoverHint.text = this.Hint;
+                    }
 
                     var imageSet = false;
 
