@@ -286,6 +286,9 @@ namespace SongRequestManagerV2.Views
             if (SceneManager.GetActiveScene().name == "GameCore") {
                 return;
             }
+            if (!this.isActivated) {
+                return;
+            }
             Dispatcher.RunOnMainThread(() =>
             {
                 try {
