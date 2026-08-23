@@ -8,6 +8,10 @@
 //   - Attach the queue cell HoverHint to the cell root object instead of
 //     relying on the BSML `hover-hint` binding on the `tags='hovered'` background,
 //     which never receives pointer events (requester info was not shown)
+// Modified: 2026-08-23
+// Changes:
+//   - Recognize r2cdn.beatsaver.com (BeatSaver's Cloudflare R2 download host)
+//     as a known CDN domain so it no longer logs as "Unknown CDN domain"
 using BeatSaberMarkupLanguage.Attributes;
 using ChatCore.Interfaces;
 using ChatCore.Models.Twitch;
@@ -145,7 +149,11 @@ namespace SongRequestManagerV2.Bots
             this._downloadURL = this.SongVersion["downloadURL"].Value
                 .Replace(RequestBot.BEATMAPS_AS_CDN_ROOT_URL, RequestBot.BEATMAPS_CDN_ROOT_URL)
                 .Replace(RequestBot.BEATMAPS_NA_CDN_ROOT_URL, RequestBot.BEATMAPS_CDN_ROOT_URL);
-            if (!this._downloadURL.StartsWith(RequestBot.BEATMAPS_CDN_ROOT_URL)) {
+            // [2026-08-23] r2cdn.beatsaver.com はBeatSaver公式の別CDN経路（Cloudflare R2）。
+            // as./na.のような単純なリージョン別ミラーではなく別バックエンドのため、
+            // cdn.beatsaver.com への書き換えは行わず、既知ドメインとして扱うのみとする。
+            if (!this._downloadURL.StartsWith(RequestBot.BEATMAPS_CDN_ROOT_URL)
+                && !this._downloadURL.StartsWith(RequestBot.BEATMAPS_R2_CDN_ROOT_URL)) {
                 try {
                     Logger.Debug($"Unknown CDN domain: {new Uri(this._downloadURL).Host}");
                 }

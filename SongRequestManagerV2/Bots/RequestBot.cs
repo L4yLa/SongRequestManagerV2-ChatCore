@@ -4,6 +4,10 @@
 //   - Removed RecievedMessages(MultiplexedMessage) overload
 //   - Updated SendChatMessage to use ChatCore SendTextMessage API
 //   - Replaced GetLoginUser OwnUserData dependency with GenericChatUser-based implementation
+// Modified: 2026-08-23
+// Changes:
+//   - Added BEATMAPS_R2_CDN_ROOT_URL constant to recognize BeatSaver's
+//     r2cdn.beatsaver.com (Cloudflare R2) download host as a known CDN domain
 using ChatCore.Interfaces;
 using ChatCore.Models.Twitch;
 using IPA.Loader;
@@ -70,6 +74,7 @@ namespace SongRequestManagerV2.Bots
         public const string BEATMAPS_CDN_ROOT_URL = "https://cdn.beatsaver.com";
         public const string BEATMAPS_AS_CDN_ROOT_URL = "https://as.cdn.beatsaver.com";
         public const string BEATMAPS_NA_CDN_ROOT_URL = "https://na.cdn.beatsaver.com";
+        public const string BEATMAPS_R2_CDN_ROOT_URL = "https://r2cdn.beatsaver.com";
 
         private readonly System.Timers.Timer _timer = new System.Timers.Timer(500);
 
