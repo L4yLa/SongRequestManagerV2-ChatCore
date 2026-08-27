@@ -374,15 +374,27 @@ namespace SongRequestManagerV2.Views
                     }
                     Dispatcher.RunOnMainThread(() =>
                     {
-                        this._requestTable?.TableView?.ReloadData();
-                        if (!selectRowCallback || this._requestTable?.TableView?.numberOfCells > (uint)this.SelectedRow) {
-                            try {
-                                this._requestTable?.TableView?.SelectCellWithIdx(this.SelectedRow, selectRowCallback);
-                                this._requestTable?.TableView?.ScrollToCellWithIdx(this.SelectedRow, TableView.ScrollPositionType.Center, true);
+                        try {
+                            var tableView = this._requestTable?.TableView;
+                            if (tableView == null) {
+                                return;
                             }
-                            catch (Exception e) {
-                                Logger.Error(e);
+                            tableView.ReloadData();
+                            // [2026-08-27] 旧実装は SelectedRow が -1 のとき (uint)(-1) が約42億となり
+                            // selectRowCallback=true の経路で選択処理が丸ごとスキップされていた。
+                            // また selectRowCallback=false の経路では SelectCellWithIdx(-1) の
+                            // 副作用に選択解除を依存していたため、呼び出し元によって挙動が変わっていた。
+                            // 選択解除と選択を明示的に分岐させ、呼び出し元に依存しないようにする。
+                            var row = this.SelectedRow;
+                            if (row < 0 || row >= this._requestTable.NumberOfCells()) {
+                                tableView.ClearSelection();
+                                return;
                             }
+                            tableView.SelectCellWithIdx(row, selectRowCallback);
+                            tableView.ScrollToCellWithIdx(row, TableView.ScrollPositionType.Center, true);
+                        }
+                        catch (Exception e) {
+                            Logger.Error(e);
                         }
                     });
                 }
