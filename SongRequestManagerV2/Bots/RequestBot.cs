@@ -21,6 +21,7 @@ using SongRequestManagerV2.Statics;
 using SongRequestManagerV2.Utils;
 using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -108,6 +109,13 @@ namespace SongRequestManagerV2.Bots
         public event Action<bool> SetButtonIntactivityRequest;
         public event Action ChangeButtonColor;
 
+        /// <summary>
+        /// [2026-09-09] PLAY が押されて <see cref="PlayNow"/> が設定されたときに発火する。
+        /// 履歴からのリプレイは同じインスタンスが渡されるため、
+        /// 参照の変化ではなく「代入されたこと」を通知する必要がある。
+        /// </summary>
+        public event Action<SongRequest> PlayNowChanged;
+
         /// <summary>SongRequest を取得、設定</summary>
         private SongRequest _currentSong;
         /// <summary>SongRequest を取得、設定</summary>
@@ -117,11 +125,42 @@ namespace SongRequestManagerV2.Bots
 
             set => this.SetProperty(ref this._currentSong, value);
         }
-        public SongRequest PlayNow { get; set; }
+        /// <summary>
+        /// PLAY で遷移する対象のリクエスト。
+        /// 代入のたびに <see cref="PlayNowChanged"/> を発火する (同じインスタンスでも発火)。
+        /// </summary>
+        private SongRequest _playNow;
+        public SongRequest PlayNow
+        {
+            get => this._playNow;
+
+            set
+            {
+                this._playNow = value;
+                PlayNowChanged?.Invoke(value);
+            }
+        }
         /// <summary>
         /// This is string empty.
         /// </summary>
         private static readonly string s_success = "";
+
+        #region [2026-09-08] !difficulty の後追い指定 (保留スロット)
+        /// <summary>
+        /// 対象のリクエストがまだキューに存在しない場合の保留内容。
+        /// </summary>
+        private class PendingModifier
+        {
+            public string Difficulty { get; set; }
+            public DateTime ExpiresAt { get; set; }
+        }
+
+        /// <summary>保留中の指定 (キーはユーザー ID)。</summary>
+        private readonly ConcurrentDictionary<string, PendingModifier> _pendingModifiers = new ConcurrentDictionary<string, PendingModifier>();
+
+        /// <summary>保留の有効期間。</summary>
+        private static readonly TimeSpan s_pendingModifierTTL = TimeSpan.FromSeconds(30);
+        #endregion
         #region 構築・破棄
         [Inject]
         protected void Constractor(IPlatformUserModel platformUserModel)
@@ -475,6 +514,15 @@ namespace SongRequestManagerV2.Bots
                     resp = await WebClient.GetAsync(requestUrl, System.Threading.CancellationToken.None);
                 }
                 if (resp == null || resp.StatusCode == System.Net.HttpStatusCode.NotFound) {
+                    // [2026-09-09] !bsrd は bsr キー指定専用なので、テキスト検索へフォールバックしない。
+                    if (requestInfo.IdOnly) {
+                        // リクエスト自体が成立しないので、保留した難易度指定も破棄する。
+                        if (requestor != null) {
+                            _ = this._pendingModifiers.TryRemove(requestor.Id, out _);
+                        }
+                        this.ChatManager.QueueChatMessage($"Invalid BeatSaver ID \"{request}\" specified.");
+                        return;
+                    }
                     requestUrl = $"{BEATMAPS_API_ROOT_URL}/search/text/0?sortOrder=Latest&q={normalrequest}";
                     resp = await WebClient.GetAsync(requestUrl, System.Threading.CancellationToken.None);
                 }
@@ -529,6 +577,8 @@ namespace SongRequestManagerV2.Bots
                 var song = songs[0];
                 var req = this._songRequestFactory.Create();
                 req.Init(song, requestor, requestInfo.RequestTime, RequestStatus.Queued, requestInfo.RequestInfoText);
+                // [2026-09-08] !difficulty / !memo がリクエストより先に投げられていた場合の反映
+                this.ConsumePendingModifier(req, requestor);
                 RequestTracker[requestor.Id].numRequests++;
                 this.ListCollectionManager.Add(s_duplicatelist, song["id"]);
                 if (RequestBotConfig.Instance.NotifySound) {
@@ -548,7 +598,21 @@ namespace SongRequestManagerV2.Bots
                 this.Writedeck(requestor, "savedqueue"); // This can be used as a backup if persistent Queue is turned off.
 
                 if (!requestInfo.Flags.HasFlag(CmdFlags.SilentResult)) {
-                    this._textFactory.Create().AddSong(song).QueueMessage(StringFormat.AddSongToQueueText.ToString());
+                    // [2026-09-09] 難易度指定必須が有効で未指定の場合は、Twitch の
+                    // レート制限を避けるため案内のみを送る。キュー追加の通知は
+                    // 難易度が指定された時点 (ApplyDifficulty) で送る。
+                    if (RequestBotConfig.Instance.RequireDifficulty && !req.HasRequestedDifficulty) {
+                        req.IsQueueMessagePending = true;
+                        this._textFactory.Create().AddSong(song).AddUser(requestor).QueueMessage(StringFormat.DifficultyRequiredText.ToString());
+                    }
+                    else {
+                        // [2026-09-09] !bsrd や保留スロット経由で受付時に難易度が確定している場合は、
+                        // この 1 通に難易度も併記する。
+                        var queueText = this._textFactory.Create().AddSong(song).Parse(StringFormat.AddSongToQueueText);
+                        this.ChatManager.QueueChatMessage(req.HasRequestedDifficulty
+                            ? $"{queueText} [{req.RequestedDifficultyDisplay}]"
+                            : queueText);
+                    }
                 }
             }
             catch (NullReferenceException nullex) {
@@ -710,6 +774,15 @@ namespace SongRequestManagerV2.Bots
 
         public string ProcessSongRequest(ParseState state)
         {
+            return this.ProcessSongRequestCore(state, false);
+        }
+
+        /// <summary>
+        /// [2026-09-09] リクエスト受付の本体。
+        /// </summary>
+        /// <param name="idOnly">bsr キー指定専用 (テキスト検索へフォールバックしない)</param>
+        private string ProcessSongRequestCore(ParseState state, bool idOnly)
+        {
             try {
                 if (RequestBotConfig.Instance.RequestQueueOpen == false && !state.Flags.HasFlag(CmdFlags.NoFilter) && !state.Flags.HasFlag(CmdFlags.Local)) // BUG: Complex permission, Queue state message needs to be handled higher up
                 {
@@ -753,7 +826,10 @@ namespace SongRequestManagerV2.Bots
                 // BUG: Need to clean up the new request pipeline
                 var testrequest = this.Normalize.RemoveSymbols(state.Parameter, this.Normalize.SymbolsNoDash);
 
-                var newRequest = new RequestInfo(state.User, state.Parameter, DateTime.UtcNow, s_digitRegex.IsMatch(testrequest) || s_beatSaverRegex.IsMatch(testrequest), state, state.Flags, state.Info);
+                var newRequest = new RequestInfo(state.User, state.Parameter, DateTime.UtcNow, s_digitRegex.IsMatch(testrequest) || s_beatSaverRegex.IsMatch(testrequest), state, state.Flags, state.Info)
+                {
+                    IdOnly = idOnly
+                };
 
                 if (!newRequest.IsBeatSaverId && state.Parameter.Length < 2) {
                     this.ChatManager.QueueChatMessage($"Request \"{state.Parameter}\" is too short- Beat Saver searches must be at least 3 characters!");
@@ -1283,6 +1359,155 @@ namespace SongRequestManagerV2.Bots
             this.ChatManager.QueueChatMessage($"Unable to find {songId}");
             return s_success;
         }
+
+        #region [2026-09-08] !difficulty コマンド
+        /// <summary>
+        /// [2026-09-09] !bsrd : bsr キーと難易度を同時に指定してリクエストする。
+        /// キー指定専用で、テキスト検索は行わない。
+        /// 難易度は曲情報を取得してからでないと解決できないため、保留スロットへ入れて
+        /// CheckRequest 内の ConsumePendingModifier で消費させる。
+        /// </summary>
+        public string RequestSongWithDifficulty(ParseState state)
+        {
+            var parameter = state.Parameter.Trim();
+            var separator = parameter.IndexOfAny(new[] { ' ', '\u3000' });
+            if (separator < 0) {
+                return state.Helptext(true);
+            }
+            var key = parameter.Substring(0, separator).Trim();
+            var difficulty = parameter.Substring(separator + 1).Trim();
+            if (string.IsNullOrEmpty(key) || string.IsNullOrEmpty(difficulty)) {
+                return state.Helptext(true);
+            }
+            var normalizedKey = this.Normalize.RemoveSymbols(key, this.Normalize.SymbolsNoDash);
+            if (!s_digitRegex.IsMatch(normalizedKey) && !s_beatSaverRegex.IsMatch(normalizedKey)) {
+                this.ChatManager.QueueChatMessage($"@{state.User.DisplayName} '{key}' is not a bsr key. usage: !bsrd <bsr key> <difficulty>");
+                return s_success;
+            }
+            this.StorePendingModifier(state.User, difficulty);
+            state.Parameter = key;
+            return this.ProcessSongRequestCore(state, true);
+        }
+
+        /// <summary>
+        /// !difficulty : 自分の直近のリクエストに難易度を指定する。
+        /// キューに自分のリクエストが無い場合のみ、次に追加されるリクエストへ
+        /// 適用するために保留する。
+        /// </summary>
+        public string SetDifficulty(ParseState state)
+        {
+            var input = state.Parameter.Trim();
+            if (string.IsNullOrEmpty(input)) {
+                return state.Helptext(true);
+            }
+            var target = this.FindLatestRequest(state.User);
+            if (target == null) {
+                this.StorePendingModifier(state.User, input);
+                this.ChatManager.QueueChatMessage($"@{state.User.DisplayName} No request in the queue. The difficulty will be applied to your next request.");
+                return s_success;
+            }
+            return this.ApplyDifficulty(target, input);
+        }
+
+        /// <summary>
+        /// 指定された難易度文字列を解決してリクエストへ適用する。
+        /// 存在しない難易度は適用しない (GetClosestDifficultyIndex が黙って
+        /// 別の難易度を選ぶのを防ぐため)。
+        /// </summary>
+        private string ApplyDifficulty(SongRequest target, string input)
+        {
+            var songName = target.SongMetaData["songName"].Value;
+            var userName = target.Requestor?.DisplayName ?? "";
+            if (!DifficultyResolver.TryResolve(target.SongVersion, input, out var resolved)) {
+                var available = DifficultyResolver.DescribeAvailable(target.SongVersion);
+                this.ChatManager.QueueChatMessage(string.IsNullOrEmpty(available)
+                    ? $"@{userName} '{input}' was not found in {songName} ({target.ID})."
+                    : $"@{userName} '{input}' was not found in {songName} ({target.ID}). Available: {available}");
+                return s_success;
+            }
+            target.RequestedDifficulty = resolved.Difficulty;
+            target.RequestedDifficultyLabel = resolved.Label;
+            target.RequestedCharacteristic = resolved.Characteristic;
+            target.RefreshDisplay();
+            this._requestManager.WriteRequest();
+            this.RefreshSongQuere();
+            // [2026-09-09] 難易度指定必須のためにキュー追加通知を保留していた場合は、
+            // Twitch のレート制限を避けるため 1 通にまとめて送る。
+            if (target.IsQueueMessagePending) {
+                target.IsQueueMessagePending = false;
+                var queueText = this._textFactory.Create()
+                    .AddSong(target.SongNode)
+                    .AddUser(target.Requestor)
+                    .Parse(StringFormat.AddSongToQueueText);
+                this.ChatManager.QueueChatMessage($"{queueText} [{target.RequestedDifficultyDisplay}]");
+            }
+            else {
+                this.ChatManager.QueueChatMessage($"@{userName} {songName} ({target.ID}) -> {target.RequestedDifficultyDisplay}");
+            }
+            return s_success;
+        }
+
+        /// <summary>
+        /// キュー内で、指定ユーザーの最も新しいリクエストを返す。
+        /// 履歴 (HistorySongs) は対象外。!wrongsong と同じ探索方法。
+        /// </summary>
+        private SongRequest FindLatestRequest(IChatUser requestor)
+        {
+            if (requestor == null) {
+                return null;
+            }
+            return RequestManager.RequestSongs.OfType<SongRequest>()
+                .Reverse()
+                .FirstOrDefault(x => x.Requestor != null && x.Requestor.Id == requestor.Id);
+        }
+
+        /// <summary>
+        /// 指定内容を保留する。
+        /// </summary>
+        private void StorePendingModifier(IChatUser requestor, string difficulty)
+        {
+            if (requestor == null) {
+                return;
+            }
+            this._pendingModifiers[requestor.Id] = new PendingModifier
+            {
+                Difficulty = difficulty,
+                ExpiresAt = DateTime.UtcNow + s_pendingModifierTTL
+            };
+        }
+
+        /// <summary>
+        /// 保留中の !difficulty をリクエストへ反映する。
+        /// </summary>
+        private void ConsumePendingModifier(SongRequest req, IChatUser requestor)
+        {
+            try {
+                if (requestor == null || !this._pendingModifiers.TryRemove(requestor.Id, out var pending)) {
+                    return;
+                }
+                if (pending.ExpiresAt < DateTime.UtcNow) {
+                    return;
+                }
+                if (string.IsNullOrEmpty(pending.Difficulty)) {
+                    return;
+                }
+                if (DifficultyResolver.TryResolve(req.SongVersion, pending.Difficulty, out var resolved)) {
+                    req.RequestedDifficulty = resolved.Difficulty;
+                    req.RequestedDifficultyLabel = resolved.Label;
+                    req.RequestedCharacteristic = resolved.Characteristic;
+                }
+                else {
+                    var available = DifficultyResolver.DescribeAvailable(req.SongVersion);
+                    this.ChatManager.QueueChatMessage(string.IsNullOrEmpty(available)
+                        ? $"@{requestor.DisplayName} '{pending.Difficulty}' was not found in this map."
+                        : $"@{requestor.DisplayName} '{pending.Difficulty}' was not found. Available: {available}");
+                }
+            }
+            catch (Exception e) {
+                Logger.Error(e);
+            }
+        }
+        #endregion
 
         public IEnumerator SetBombState(ParseState state)
         {

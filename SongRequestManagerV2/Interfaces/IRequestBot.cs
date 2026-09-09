@@ -31,6 +31,11 @@ namespace SongRequestManagerV2.Interfaces
         event Action<bool> UpdateUIRequest;
         event Action<bool> SetButtonIntactivityRequest;
         event Action ChangeButtonColor;
+        /// <summary>
+        /// [2026-09-09] PLAY が押されて PlayNow が設定されたときに発火する。
+        /// 同じインスタンスが再度代入された場合 (履歴からのリプレイ) も発火する。
+        /// </summary>
+        event Action<SongRequest> PlayNowChanged;
 
         string QueueMessage(bool QueueState);
         List<JSONObject> ReadJSON(string path);
@@ -109,6 +114,14 @@ namespace SongRequestManagerV2.Interfaces
         string ShowSongLink(ParseState state);
         void Skip(SongRequest songRequest, RequestStatus status = RequestStatus.Skipped);
         string SongMsg(ParseState state);
+        /// <summary>
+        /// [2026-09-09] !bsrd : bsr キーと難易度を同時に指定してリクエストする。
+        /// </summary>
+        string RequestSongWithDifficulty(ParseState state);
+        /// <summary>
+        /// [2026-09-08] !difficulty : 自分の直近のリクエストに難易度を指定する。
+        /// </summary>
+        string SetDifficulty(ParseState state);
         string SongSearchFilter(JSONObject song, bool fast = false, SongFilter filter = (SongFilter)(-1));
         void ToggleQueue(IChatUser requestor, string request, bool state);
         void Unban(IChatUser requestor, string request);

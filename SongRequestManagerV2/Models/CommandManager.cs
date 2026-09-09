@@ -43,6 +43,8 @@ namespace SongRequestManagerV2.Models
         private static readonly Regex s_remapRegex = new Regex("^[0-9a-fA-F]+,[0-9a-fA-F]+$", RegexOptions.Compiled);
         private static readonly Regex s_beatsaversongversion = new Regex("^[0-9a-zA-Z]+$", RegexOptions.Compiled);
         private static readonly Regex s_nothing = new Regex("$^", RegexOptions.Compiled);
+        // [2026-09-09] !bsrd 用。bsr キーと難易度の 2 トークンを必須にする。
+        private static readonly Regex s_keyAndDifficulty = new Regex(@"^\s*\S+\s+\S+", RegexOptions.Compiled);
         private static readonly Regex s_anything = new Regex(".*", RegexOptions.Compiled); // Is this the most efficient way?
         private static readonly Regex s_atleast1 = new Regex("..*", RegexOptions.Compiled); // Allow usage message to kick in for blank 
         private static readonly Regex s_fail = new Regex("(?!x)x", RegexOptions.Compiled); // Not sure what the official fastest way to auto-fail a match is, so this will do
@@ -97,6 +99,11 @@ namespace SongRequestManagerV2.Models
             commands.Add(this._commandFactory.Create().Setup("!last", "!demote", "!later").Action(this.Bot.MoveRequestToBottom).Help(FlagParameter.Mod, "usage: %alias%<songname>,<username>,<song id> %|%... Moves a song to the bottom of the request queue.", s_atleast1));
             commands.Add(this._commandFactory.Create().Setup("!remove").Action(this.Bot.DequeueSong).Help(FlagParameter.Mod, "usage: %alias%<songname>,<username>,<song id> %|%... Removes a song from the queue.", s_atleast1));
             commands.Add(this._commandFactory.Create().Setup("!wrongsong", "!wrong", "!oops").Action(this.Bot.WrongSong).Help(FlagParameter.Everyone, "usage: %alias%%|%... Removes your last requested song form the queue. It can be requested again later.", s_nothing));
+
+            // [2026-09-08] 直近の自分のリクエストに後から難易度を指定する。
+            commands.Add(this._commandFactory.Create().Setup("!difficulty", "!diff", "!d", "!難易度").Action(this.Bot.SetDifficulty).Help(FlagParameter.Everyone, "usage: %alias%<difficulty name or custom label>%|%... Sets the difficulty for your most recent request. Standard names (easy/normal/hard/expert/expert+ and short forms) and the map's own difficulty label are both accepted, matched case-insensitively.", s_atleast1));
+            // [2026-09-09] bsr キーと難易度を同時に指定する。キー指定専用 (検索なし)。
+            commands.Add(this._commandFactory.Create().Setup("!bsrd", "!bsrdiff").Action(this.Bot.RequestSongWithDifficulty).Help(FlagParameter.Everyone, "usage: %alias%<bsr key> <difficulty>%|%... Requests a song by its bsr key with the difficulty specified at once. Text search is not available with this command.", s_keyAndDifficulty));
 
             commands.Add(this._commandFactory.Create().Setup("!unblock").Action(this.Bot.Unban).Help(FlagParameter.Mod, "usage: %alias%<song id>, do not include <,>'s.", s_beatsaversongversion));
             commands.Add(this._commandFactory.Create().Setup("!block").AsyncAction(this.Bot.Ban).Help(FlagParameter.Mod, "usage: %alias%<song id>, do not include <,>'s.", s_beatsaversongversion));
@@ -161,6 +168,7 @@ namespace SongRequestManagerV2.Models
             commands.Add(this._commandFactory.Create().Setup("QueueListRow2", StringFormat.QueueListRow2));
             commands.Add(this._commandFactory.Create().Setup("QueueListFormat", StringFormat.QueueListFormat));
             commands.Add(this._commandFactory.Create().Setup("HistoryListFormat", StringFormat.HistoryListFormat));
+            commands.Add(this._commandFactory.Create().Setup("DifficultyRequiredText", StringFormat.DifficultyRequiredText));
             commands.Add(this._commandFactory.Create().Setup("AddSortOrder", StringFormat.AddSortOrder));
             commands.Add(this._commandFactory.Create().Setup("LookupSortOrder", StringFormat.LookupSortOrder)); // -ranking +id , note that +/- are mandatory
             commands.Add(this._commandFactory.Create().Setup("AddSongsSortOrder", StringFormat.AddSongsSortOrder));
