@@ -9,6 +9,7 @@ using SongRequestManagerV2.Configuration;
 using SongRequestManagerV2.Extentions;
 using SongRequestManagerV2.Interfaces;
 using SongRequestManagerV2.Localizes;
+using SongRequestManagerV2.Statics;
 using SongRequestManagerV2.Utils;
 using System;
 using System.Collections.Generic;
@@ -286,6 +287,9 @@ namespace SongRequestManagerV2.Views
             if (SceneManager.GetActiveScene().name == "GameCore") {
                 return;
             }
+            if (!this.isActivated) {
+                return;
+            }
             Dispatcher.RunOnMainThread(() =>
             {
                 try {
@@ -331,8 +335,10 @@ namespace SongRequestManagerV2.Views
 
                 var playButtonEnabled = toggled;
                 if (toggled && !this.IsShowHistory) {
-                    var isChallenge = this._bot.CurrentSong.RequestInfo.IndexOf("!challenge", StringComparison.OrdinalIgnoreCase) >= 0;
-                    playButtonEnabled = !isChallenge && toggled;
+                    // [2026-09-08] !challenge 判定を SongRequest.IsPlayable へ統合した。
+                    // 難易度指定必須が有効で未指定のリクエストもここで再生不可になる。
+                    // 合わせて CurrentSong が null の場合の NRE も回避する。
+                    playButtonEnabled = this._bot.CurrentSong?.IsPlayable == true;
                 }
                 this.IsPlayButtonEnable = playButtonEnabled;
 
@@ -371,15 +377,35 @@ namespace SongRequestManagerV2.Views
                     }
                     Dispatcher.RunOnMainThread(() =>
                     {
-                        this._requestTable?.TableView?.ReloadData();
-                        if (!selectRowCallback || this._requestTable?.TableView?.numberOfCells > (uint)this.SelectedRow) {
+                        try {
+                            var tableView = this._requestTable?.TableView;
+                            if (tableView == null) {
+                                return;
+                            }
+                            tableView.ReloadData();
+                            // [2026-08-27] 旧実装は SelectedRow が -1 のとき (uint)(-1) が約42億となり
+                            // selectRowCallback=true の経路で選択処理が丸ごとスキップされていた。
+                            // また selectRowCallback=false の経路では SelectCellWithIdx(-1) の
+                            // 副作用に選択解除を依存していたため、呼び出し元によって挙動が変わっていた。
+                            // 選択解除と選択を明示的に分岐させ、呼び出し元に依存しないようにする。
+                            var row = this.SelectedRow;
+                            if (row < 0 || row >= this._requestTable.NumberOfCells()) {
+                                tableView.ClearSelection();
+                                return;
+                            }
+                            // [2026-09-08] SelectCellWithIdx は selected-cell をプログラムから
+                            // 発火させるため、その間はチャット案内を抑止する。
+                            this._suppressSelectionNotice = true;
                             try {
-                                this._requestTable?.TableView?.SelectCellWithIdx(this.SelectedRow, selectRowCallback);
-                                this._requestTable?.TableView?.ScrollToCellWithIdx(this.SelectedRow, TableView.ScrollPositionType.Center, true);
+                                tableView.SelectCellWithIdx(row, selectRowCallback);
                             }
-                            catch (Exception e) {
-                                Logger.Error(e);
+                            finally {
+                                this._suppressSelectionNotice = false;
                             }
+                            tableView.ScrollToCellWithIdx(row, TableView.ScrollPositionType.Center, true);
+                        }
+                        catch (Exception e) {
+                            Logger.Error(e);
                         }
                     });
                 }
@@ -469,6 +495,10 @@ namespace SongRequestManagerV2.Views
 #pragma warning restore IDE0051 // 使用されていないプライベート メンバーを削除する
         {
             if (this._requestTable?.NumberOfCells() > 0) {
+                // [2026-09-08] ボタンの interactable で防いでいるが、多重防御として明示的に弾く
+                if (!this.IsShowHistory && this._bot.CurrentSong?.IsPlayable != true) {
+                    return;
+                }
                 RequestBot.Played.Add(this._bot.CurrentSong.SongNode);
                 this._bot.WriteJSON(RequestBot.playedfilename, RequestBot.Played);
                 this.SetUIInteractivity(false);
@@ -500,10 +530,42 @@ namespace SongRequestManagerV2.Views
             this._playButton.GetComponentsInChildren<ImageView>().FirstOrDefault(x => x.name == "Underline").color = this.SelectedRow >= 0 ? Color.green : Color.red;
 
             if (!this.IsShowHistory) {
-                var isChallenge = this._bot.CurrentSong.RequestInfo.IndexOf("!challenge", StringComparison.OrdinalIgnoreCase) >= 0;
-                this.IsPlayButtonEnable = !isChallenge;
+                var current = this._bot.CurrentSong;
+                this.IsPlayButtonEnable = current?.IsPlayable == true;
+                // [2026-09-08] 難易度未指定でグレーアウトされている行が選択されたら、
+                // リクエスト者へ指定方法を案内する。
+                if (current != null && current.NeedsDifficulty) {
+                    this.NotifyDifficultyRequired(current);
+                }
             }
             this.SetUIInteractivity();
+        }
+
+        /// <summary>
+        /// [2026-09-08] 難易度未指定のリクエストが選択されたときの案内。
+        /// selected-cell はプログラムからの選択でも発火するため抑止フラグで守り、
+        /// 連続選択によるスパムを冷却時間で抑える。
+        /// </summary>
+        private void NotifyDifficultyRequired(SongRequest song)
+        {
+            try {
+                if (this._suppressSelectionNotice) {
+                    return;
+                }
+                var now = DateTime.UtcNow;
+                if (this._lastNotifiedSong == song && now - this._lastNotifiedAt < s_notifyCooldown) {
+                    return;
+                }
+                this._lastNotifiedSong = song;
+                this._lastNotifiedAt = now;
+                _ = this._textFactory.Create()
+                    .AddSong(song.SongNode)
+                    .AddUser(song.Requestor)
+                    .QueueMessage(StringFormat.DifficultyRequiredText.ToString());
+            }
+            catch (Exception e) {
+                Logger.Error(e);
+            }
         }
         private void SongLoader_SongsLoadedEvent(Loader arg1, System.Collections.Concurrent.ConcurrentDictionary<string, BeatmapLevel> arg2)
         {
@@ -549,6 +611,14 @@ namespace SongRequestManagerV2.Views
         private readonly IRequestBot _bot;
         [Inject]
         private readonly IChatManager _chatManager;
+        [Inject]
+        private readonly DynamicText.DynamicTextFactory _textFactory;
+
+        // [2026-09-08] 難易度未指定の案内メッセージ制御
+        private static readonly TimeSpan s_notifyCooldown = TimeSpan.FromSeconds(30);
+        private bool _suppressSelectionNotice;
+        private SongRequest _lastNotifiedSong;
+        private DateTime _lastNotifiedAt = DateTime.MinValue;
         private AudioSource _audioSource;
         private RandomObjectPicker<AudioClip> _randomSoundPicker;
         private IUpdateChecker _updateChecker;

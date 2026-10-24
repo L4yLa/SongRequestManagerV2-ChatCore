@@ -13,6 +13,10 @@ namespace SongRequestManagerV2.Installes
 
             _ = this.Container.BindInterfacesAndSelfTo<SongListUtils>().AsCached();
 
+            // [2026-09-08] !difficulty で指定された難易度を曲選択画面でハイライトする。
+            // IAffinity を含むため BindInterfacesAndSelfTo で登録し、SiraUtil に拾わせる。
+            _ = this.Container.BindInterfacesAndSelfTo<DifficultyHighlighter>().AsSingle().NonLazy();
+
             _ = this.Container.BindInterfacesAndSelfTo<RequestBotListView>().FromNewComponentAsViewController().AsSingle();
             _ = this.Container.BindInterfacesAndSelfTo<KeyboardViewController>().FromNewComponentAsViewController().AsSingle();
             _ = this.Container.BindInterfacesAndSelfTo<SongRequestManagerSettings>().FromNewComponentAsViewController().AsSingle();

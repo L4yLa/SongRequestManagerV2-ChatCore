@@ -37,6 +37,9 @@ namespace SongRequestManagerV2.Configuration
         public virtual string BackupPath { get; set; } = Path.Combine(Environment.CurrentDirectory, "userdata", "backup");
         public virtual bool PPSearch { get; set; } = true;
         public virtual bool PerformanceMode { get; set; } = false;
+        // [2026-09-08] 難易度指定必須。有効時、!difficulty 未指定のリクエストは
+        // キュー一覧でグレーアウトされ、再生できなくなる。
+        public virtual bool RequireDifficulty { get; set; } = false;
         public virtual bool NotifySound { get; set; } = false;
         public virtual int SoundVolume { get; set; } = 50;
         public virtual bool EnableAprilFool { get; set; } = false;

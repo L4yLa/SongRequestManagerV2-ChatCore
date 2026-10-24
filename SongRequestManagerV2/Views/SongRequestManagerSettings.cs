@@ -126,6 +126,15 @@ namespace SongRequestManagerV2.Views
             set => RequestBotConfig.Instance.PerformanceMode = value;
         }
 
+        // [2026-09-08] 難易度指定必須
+        [UIValue("require-difficulty")]
+        public bool RequireDifficulty
+        {
+            get => RequestBotConfig.Instance.RequireDifficulty;
+
+            set => RequestBotConfig.Instance.RequireDifficulty = value;
+        }
+
         [UIValue("is-sound-enable")]
         public bool IsSoundEnable
         {

@@ -84,6 +84,9 @@ namespace SongRequestManagerV2.Views
 
         internal void SetButtonColor()
         {
+            if (this._button == null) {
+                return;
+            }
             ImageView underLine = null;
             if (Utility.IsAprilFool()) {
                 if (RequestManager.RequestSongs.Any()) {
@@ -177,6 +180,7 @@ namespace SongRequestManagerV2.Views
             this._bot.ChangeButtonColor -= this.SetButtonColor;
             this._bot.RefreshListRequest -= this.RefreshListRequest;
             RequestBotConfig.Instance.ConfigChangedEvent -= this.OnConfigChangedEvent;
+            this._requestFlow.QueueStatusChanged -= this.ChangeButtonText;
             this._requestFlow.PlayProcessEvent -= this.ProcessSongRequest;
             this.DownloadProgress.ProgressChanged -= this.Progress_ProgressChanged;
             SceneManager.activeSceneChanged -= this.SceneManager_activeSceneChanged;
@@ -186,6 +190,9 @@ namespace SongRequestManagerV2.Views
 
         public void OnEnable()
         {
+            if (this._button == null) {
+                return;
+            }
             this.ChangeButtonText();
         }
         #endregion

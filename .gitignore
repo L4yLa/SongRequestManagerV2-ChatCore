@@ -338,3 +338,7 @@ ASALocalRun/
 
 # BeatPulse healthcheck temp database
 healthchecksdb
+
+# Build batch
+SongRequestManagerV2/build.cmd
+SongRequestManagerV2/clean.cmd
