@@ -641,7 +641,8 @@ namespace SongRequestManagerV2.Views
 
         public async void Initialize()
         {
-            this._audioSource = Instantiate(Resources.FindObjectsOfTypeAll<BasicUIAudioManager>().FirstOrDefault().GetField<AudioSource, BasicUIAudioManager>("_audioSource"));
+            // BS 1.42 以降 BasicUIAudioManager の _audioSource は _audioSources (AudioSource[]) に変更されたため、先頭要素を複製元にする。
+            this._audioSource = Instantiate(Resources.FindObjectsOfTypeAll<BasicUIAudioManager>().FirstOrDefault().GetField<AudioSource[], BasicUIAudioManager>("_audioSources").FirstOrDefault());
             this._audioSource.pitch = 1;
             var clips = Resources.FindObjectsOfTypeAll<BasicUIAudioManager>().FirstOrDefault().GetField<AudioClip[], BasicUIAudioManager>("_clickSounds");
             this._randomSoundPicker = new RandomObjectPicker<AudioClip>(clips, 0.07f);
