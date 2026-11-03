@@ -264,7 +264,8 @@ namespace SongRequestManagerV2.Models
 
                 var cmdname = command.Aliases.FirstOrDefault() ?? "";
                 if (everything) {
-                    cmdname += new string(' ', 20 - cmdname.Length);
+                    // [2026-11-02] 20 文字超の名前 (DifficultyRequiredText 等) で new string(' ', 負数) が例外になるため PadRight に変更。
+                    cmdname = cmdname.PadRight(20);
                 }
 
                 if (command.Flags.HasFlag(CmdFlags.Variable) && (everything | command.ChangedParameters.HasFlag(ChangedFlags.Variable))) {
